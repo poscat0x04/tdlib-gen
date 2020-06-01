@@ -83,11 +83,16 @@ convArg' m Arg {..} =
     }
 
 sanitize :: Text -> Text
-sanitize "type" = "ty"
+sanitize "type" = "type_"
+sanitize "data" = "data_"
 sanitize x = x
 
 defMapping :: FieldMapping
-defMapping = M.fromList [("ty", "type")]
+defMapping =
+  M.fromList
+    [ ("type_", "type"),
+      ("data_", "data")
+    ]
 
 combToConstr :: TyMap -> Int -> Combinator -> (Constr, FieldMapping)
 combToConstr m i Combinator {..} =
