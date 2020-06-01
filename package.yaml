@@ -9,10 +9,11 @@ copyright: "(c) 2020 Poscat"
 extra-source-files:
   - README.md
   - CHANGELOG.md
+  - test/data/*
 
 # Metadata used when publishing your package
-# synopsis:            Short description of your package
-# category:            Web
+synopsis: Codegen for TDLib
+category: Codegen
 
 # To avoid duplicated efforts in documentation and dealing with the
 # complications of embedding Haddock markup inside cabal files, it is
