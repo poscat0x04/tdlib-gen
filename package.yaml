@@ -28,7 +28,6 @@ dependencies:
   - lens
   - generic-lens
   - template-haskell
-  - th-lift-instances
   - megaparsec
   - language-tl
   - aeson

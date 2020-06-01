@@ -3,11 +3,9 @@
 module Language.Haskell.Codegen.TH where
 
 import Codegen
-import Data.Aeson
 import Data.Aeson.TH
-import Data.Text (pack, unpack)
+import Data.Text (unpack)
 import qualified Data.Text.IO as T
-import Instances.TH.Lift
 import Language.Haskell.Codegen
 import Language.Haskell.TH
 import Language.TL.Parser

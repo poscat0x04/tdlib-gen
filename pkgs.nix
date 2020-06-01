@@ -1,6 +1,6 @@
-pkgs: with pkgs;
-[
-  (callPackage ./nix/language-tl.nix {})
+pkgs:
+with pkgs; [
+  (callPackage ./nix/language-tl.nix { })
   prettyprinter
   megaparsec
   lens
@@ -8,5 +8,4 @@ pkgs: with pkgs;
   aeson
   base64-bytestring-type
   pretty-simple
-  th-lift-instances
 ]
