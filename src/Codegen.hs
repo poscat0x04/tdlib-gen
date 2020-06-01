@@ -52,8 +52,7 @@ defTyMap =
       ("int32", "I32"),
       ("int64", "I64"),
       ("int53", "I53"),
-      ("bytes", "ByteString64"),
-      ("Ok", "()")
+      ("bytes", "ByteString64")
     ]
 
 typeConv :: TyMap -> A.Type -> Type
@@ -78,10 +77,17 @@ convArg m i Arg {..} =
 convArg' :: TyMap -> Arg -> Field
 convArg' m Arg {..} =
   Field
-    { name = argName,
+    { name = sanitize argName,
       ty = typeConv m argType,
       ..
     }
+
+sanitize :: Text -> Text
+sanitize "type" = "ty"
+sanitize x = x
+
+defMapping :: FieldMapping
+defMapping = M.fromList [("ty", "type")]
 
 combToConstr :: TyMap -> Int -> Combinator -> (Constr, FieldMapping)
 combToConstr m i Combinator {..} =
@@ -105,10 +111,11 @@ formArr :: [Field] -> Type -> Ann -> TypeSig
 formArr fields resT resAnn = foldl (\res Field {..} -> Conn {..}) (Result {ty = resT, ann = resAnn}) fields
 
 combToFun :: TyMap -> Combinator -> FunDef
-combToFun m Combinator {..} =
+combToFun m c@Combinator {..} =
   FunDef
     { name = ident,
-      typeSig = formArr (fmap (convArg' m) args) (typeConv m resType) Nothing,
+      constr = combToConstr' m c,
+      res = typeConv m resType,
       ..
     }
 
@@ -122,3 +129,12 @@ convADT m A.ADT {..} =
 
 convFun :: TyMap -> Function -> FunDef
 convFun m (Function c) = combToFun m c
+
+paramADT :: FunDef -> ADT
+paramADT FunDef {..} =
+  ADT
+    { ann = Just ("Parameter of Function " <> name),
+      mapping = defMapping,
+      constr = [constr],
+      name = upper name
+    }

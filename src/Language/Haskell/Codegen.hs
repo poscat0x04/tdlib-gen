@@ -1,7 +1,10 @@
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE OverloadedLabels #-}
 
 module Language.Haskell.Codegen where
 
+import Control.Lens
+import Data.Generics.Labels ()
 import Data.List
 import Data.Map.Strict (Map)
 import Data.Text (Text)
@@ -146,24 +149,19 @@ data FunDef
   = FunDef
       { name :: Text,
         ann :: Ann,
-        typeSig :: TypeSig
+        constr :: Constr,
+        res :: Type
       }
   deriving (Show, Eq, Generic)
-
-toList :: TypeSig -> [(Text, Ann, Type)]
-toList Result {} = []
-toList Conn {..} = (name, ann, ty) : toList res
-
--- | Generate function body
-prettyFunBody :: TypeSig -> Doc ann
-prettyFunBody = undefined
 
 instance Pretty FunDef where
   pretty FunDef {..} =
     let doc = prettyDoc ann
         n = unsafeTextWithoutNewlines name
+        cmd = unsafeTextWithoutNewlines (constr ^. #name)
+        resTy = pretty res
      in doc
           <> vsep
-            [ n <+> "::",
-              indent 2 (pretty typeSig)
+            [ n <+> "::" <+> "Member TDLib r" <+> "=>" <+> cmd <+> "->" <+> "Sem r (Error :+: " <> resTy <> ")",
+              n <+> "=" <+> "runCmd"
             ]
