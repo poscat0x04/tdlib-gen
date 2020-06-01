@@ -7,5 +7,4 @@ with pkgs; [
   generic-lens
   aeson
   base64-bytestring-type
-  pretty-simple
 ]
