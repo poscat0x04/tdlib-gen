@@ -25,13 +25,20 @@ concatDec = fmap (concat) . sequence
 
 genDec :: FilePath -> Q [Dec]
 genDec fp = do
-  f <- runIO $ T.readFile fp
-  let Right prog = runParser program "td_api.tl" f
-  let (datas, funs) = convProgram prog
-  concatDec $ fmap adtInstanceDec $ fmap (convADT defTyMap) datas
+  adts <- runIO $ do
+    f <- T.readFile fp
+    let mprog = runParser program "td_api.tl" f
+    case mprog of
+      Left _ -> error "parse failed"
+      Right prog -> do
+        let (datas, functions) = convProgram prog
+        let adts = fmap (convADT defTyMap) datas
+        let funDefs = fmap (convFun defTyMap) functions
+        pure (adts <> fmap paramADT funDefs)
+  concatDec $ fmap adtInstanceDec adts
 
 dataDec :: Q [Dec]
-dataDec = genDec "test/data/td_api.tl"
+dataDec = genDec "data/td_api.tl"
 
 genFunDef :: TyMap -> FunDef -> Q [Dec]
 genFunDef m d = undefined
