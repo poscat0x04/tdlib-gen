@@ -72,9 +72,6 @@ funHeader mod dep1 dep2 =
           ""
         ]
 
-sep' :: Doc ann
-sep' = "-- * Function Arguments"
-
 main :: IO ()
 main = do
   putStrLn "tl file path:"
