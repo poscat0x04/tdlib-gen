@@ -117,7 +117,7 @@ data TypeSig
 
 instance Pretty TypeSig where
   pretty (Result ty doc) =
-    prettyDoc doc <> "Sem r" <+> "(" <> pretty ty <> ")"
+    prettyDoc doc <> "Sem r" <+> "(" <> "Error ∪" <+> pretty ty <> ")"
   pretty (Conn ty doc res) =
     prettyDoc doc
       <> vsep
@@ -181,7 +181,7 @@ simplePretty FunDef {..} =
       resTy = pretty res
    in doc
         <> vsep
-          [ n <+> "::" <+> "Member TDLib r" <+> "=>" <+> cmd <+> "->" <+> "Sem r (Error :+: " <> resTy <> ")",
+          [ n <+> "::" <+> "Member TDLib r" <+> "=>" <+> cmd <+> "->" <+> "Sem r (Error ∪ " <> resTy <> ")",
             n <+> "=" <+> "runCmd"
           ]
 
