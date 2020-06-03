@@ -1,5 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 
+-- | Generate 'ToJSON'/'FromJSON' instances using template haskell
 module Language.Haskell.Codegen.TH where
 
 import Codegen
