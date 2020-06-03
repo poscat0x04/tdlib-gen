@@ -7,6 +7,7 @@ import Control.Lens
 import Data.Generics.Labels ()
 import Data.List
 import Data.Map.Strict (Map)
+import Data.String
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Text.Prettyprint.Doc
@@ -76,6 +77,9 @@ data Constr
       }
   deriving (Show, Eq, Generic)
 
+arity :: Constr -> Int
+arity = length . fields
+
 instance Pretty Constr where
   pretty Constr {..} =
     let doc = prettyDoc ann
@@ -96,6 +100,7 @@ data Type
 instance Pretty Type where
   pretty (Type t) = unsafeTextWithoutNewlines t
   pretty (Arr ty ty') = pretty ty <+> "->" <+> pretty ty'
+  pretty (App (Type "[]") ty) = "[" <> pretty ty <> "]"
   pretty (App tyCon ty) = "(" <> pretty tyCon <> ")" <+> "(" <> pretty ty <> ")"
 
 data TypeSig
@@ -106,20 +111,25 @@ data TypeSig
   | Conn
       { ty :: Type,
         ann :: Ann,
-        name :: Text,
         res :: TypeSig
       }
   deriving (Show, Eq, Generic)
 
 instance Pretty TypeSig where
   pretty (Result ty doc) =
-    prettyDoc doc <> pretty (App io ty)
-  pretty (Conn ty doc _ res) =
+    prettyDoc doc <> "Sem r" <+> "(" <> pretty ty <> ")"
+  pretty (Conn ty doc res) =
     prettyDoc doc
       <> vsep
         [ pretty ty <+> "->",
           pretty res
         ]
+
+type Annotated = (Type, Ann)
+
+formArr :: [Annotated] -> Annotated -> TypeSig
+formArr [] (ty, ann) = Result ty ann
+formArr ((ty, ann) : xs) a = Conn ty ann (formArr xs a)
 
 data FunDef
   = FunDef
@@ -130,14 +140,50 @@ data FunDef
       }
   deriving (Show, Eq, Generic)
 
+getAnn :: Field -> Annotated
+getAnn Field {..} = (ty, ann)
+
+flattenSig :: FunDef -> Doc ann
+flattenSig FunDef {..} =
+  let n = unsafeTextWithoutNewlines name
+      doc = prettyDoc ann
+      c = unsafeTextWithoutNewlines (constr ^. #name)
+      sig = pretty $ formArr (fmap getAnn (fields constr)) (res, Nothing)
+   in vsep
+        [ doc <> n <+> "::",
+          indent 2 "Member TDLib r =>",
+          indent 2 sig
+        ]
+
+vars :: Int -> Doc ann
+vars i = hsep $ fmap (fromString . ("_" <>) . show) [1 .. i]
+
+flattenBody :: FunDef -> Doc ann
+flattenBody FunDef {..} =
+  let n = unsafeTextWithoutNewlines name
+      c = unsafeTextWithoutNewlines (constr ^. #name)
+      ar = arity constr
+      v = vars ar
+   in hsep [n, v, "=", "runCmd $", c, v]
+
+flattenPrint :: FunDef -> Doc ann
+flattenPrint def =
+  vsep
+    [ flattenSig def,
+      flattenBody def
+    ]
+
+simplePretty :: FunDef -> Doc ann
+simplePretty FunDef {..} =
+  let doc = prettyDoc ann
+      n = unsafeTextWithoutNewlines name
+      cmd = unsafeTextWithoutNewlines (constr ^. #name)
+      resTy = pretty res
+   in doc
+        <> vsep
+          [ n <+> "::" <+> "Member TDLib r" <+> "=>" <+> cmd <+> "->" <+> "Sem r (Error :+: " <> resTy <> ")",
+            n <+> "=" <+> "runCmd"
+          ]
+
 instance Pretty FunDef where
-  pretty FunDef {..} =
-    let doc = prettyDoc ann
-        n = unsafeTextWithoutNewlines name
-        cmd = unsafeTextWithoutNewlines (constr ^. #name)
-        resTy = pretty res
-     in doc
-          <> vsep
-            [ n <+> "::" <+> "Member TDLib r" <+> "=>" <+> cmd <+> "->" <+> "Sem r (Error :+: " <> resTy <> ")",
-              n <+> "=" <+> "runCmd"
-            ]
+  pretty d@FunDef {..} = flattenPrint d
