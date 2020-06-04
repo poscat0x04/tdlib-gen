@@ -81,12 +81,12 @@ main = do
     Left _ -> error "parse failed"
     Right prog -> do
       let (datas, functions) = convProgram prog
-      let adts = fmap (convADT defTyMap) datas
+      let adts = fmap (fst . sanitizeADT . convADT defTyMap) datas
       let funDefs = fmap (convFun defTyMap) functions
-      let adts' = fmap paramADT funDefs
-      let file1 = dataDeclHeader <> "\n\n" <> vsep (fmap pretty adts) <> "\n\n" <> "instancesDec"
+      let adts' = fmap (fst . sanitizeADT . paramADT) funDefs
+      let file1 = dataDeclHeader <> "\n\n" <> vsep (fmap pretty adts) <> "\n\n" <> "typeInstances"
       let file2 = funHeader <> "\n\n" <> vsep (fmap pretty funDefs)
-      let file3 = funArgHeader <> "\n\n" <> vsep (fmap pretty adts') <> "\n\n" <> "instancesDec'"
+      let file3 = funArgHeader <> "\n\n" <> vsep (fmap pretty adts') <> "\n\n" <> "funArgInstances"
       writeFile "Types.hs" (show file1)
       writeFile "Functions.hs" (show file2)
       writeFile "FunArgs.hs" (show file3)

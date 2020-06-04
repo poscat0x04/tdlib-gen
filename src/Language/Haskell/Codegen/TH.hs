@@ -13,48 +13,38 @@ import Language.TL.Parser
 import Processing
 import Text.Megaparsec
 
-adtInstanceDec :: ADT -> Q [Dec]
-adtInstanceDec ADT {..} =
+adtI :: ADT -> Q [Dec]
+adtI a@ADT {..} =
   let con = mkName $ unpack name
+      mapping = snd $ sanitizeADT a
       opt = mkOption (mkModifier mapping)
    in deriveJSON opt con
 
 concatDec :: [Q [Dec]] -> Q [Dec]
 concatDec = fmap (concat) . sequence
 
-genDec :: FilePath -> Q [Dec]
-genDec fp = do
-  adts <- runIO $ do
-    f <- T.readFile fp
-    let mprog = runParser program "td_api.tl" f
-    case mprog of
-      Left _ -> error "parse failed"
-      Right prog -> do
-        let (datas, functions) = convProgram prog
-        let adts = fmap (convADT defTyMap) datas
-        let funDefs = fmap (convFun defTyMap) functions
-        pure adts
-  concatDec $ fmap adtInstanceDec adts
+preProcess :: FilePath -> IO ([ADT], [ADT])
+preProcess fp = do
+  f <- T.readFile fp
+  let mprog = runParser program "td_api.tl" f
+  case mprog of
+    Left _ -> error "parse failed!"
+    Right prog -> do
+      let (d, f) = convProgram prog
+      let types = fmap (convADT defTyMap) d
+      let funs = fmap (convFun defTyMap) f
+      let funArgs = fmap paramADT funs
+      pure (types, funArgs)
 
-genDec' :: FilePath -> Q [Dec]
-genDec' fp = do
-  adts <- runIO $ do
-    f <- T.readFile fp
-    let mprog = runParser program "td_api.tl" f
-    case mprog of
-      Left _ -> error "parse failed"
-      Right prog -> do
-        let (datas, functions) = convProgram prog
-        let adts = fmap (convADT defTyMap) datas
-        let funDefs = fmap (convFun defTyMap) functions
-        pure (fmap paramADT funDefs)
-  concatDec $ fmap adtInstanceDec adts
+preProcessQ :: Q ([ADT], [ADT])
+preProcessQ = runIO (preProcess "data/td_api.tl")
 
-instancesDec :: Q [Dec]
-instancesDec = genDec "data/td_api.tl"
+typeInstances :: Q [Dec]
+typeInstances = do
+  p <- preProcessQ
+  concatDec $ fmap adtI $ fst p
 
-instancesDec' :: Q [Dec]
-instancesDec' = genDec' "data/td_api.tl"
-
-genFunDef :: TyMap -> FunDef -> Q [Dec]
-genFunDef m d = undefined
+funArgInstances :: Q [Dec]
+funArgInstances = do
+  p <- preProcessQ
+  concatDec $ fmap adtI $ snd p

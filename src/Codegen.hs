@@ -63,52 +63,19 @@ typeConv m A.NatType = Type "Int"
 app :: Type -> [Type] -> Type
 app t = foldl (\acc ty -> App acc ty) t
 
-convArg :: TyMap -> Int -> Arg -> (Field, (String, String))
-convArg m i Arg {..} =
-  let newName = argName <> "_" <> pack (show i)
-   in ( Field
-          { name = newName,
-            ty = typeConv m argType,
-            ..
-          },
-        (unpack newName, unpack argName)
-      )
-
-convArg' :: TyMap -> Arg -> Field
-convArg' m Arg {..} =
+convArg :: TyMap -> Arg -> Field
+convArg m Arg {..} =
   Field
-    { name = sanitize argName,
+    { name = argName,
       ty = typeConv m argType,
       ..
     }
 
-sanitize :: Text -> Text
-sanitize "type" = "type_"
-sanitize "data" = "data_"
-sanitize x = x
-
-defMapping :: FieldMapping
-defMapping =
-  M.fromList
-    [ ("type_", "type"),
-      ("data_", "data")
-    ]
-
-combToConstr :: TyMap -> Int -> Combinator -> (Constr, FieldMapping)
-combToConstr m i Combinator {..} =
-  let (fields, l) = unzip $ fmap (convArg m i) args
-   in ( Constr
-          { name = upper ident,
-            ..
-          },
-        M.fromList l
-      )
-
-combToConstr' :: TyMap -> Combinator -> Constr
-combToConstr' m Combinator {..} =
+combToConstr :: TyMap -> Combinator -> Constr
+combToConstr m Combinator {..} =
   Constr
     { name = upper ident,
-      fields = fmap (convArg' m) args,
+      fields = fmap (convArg m) args,
       ..
     }
 
@@ -119,18 +86,86 @@ combToFun :: TyMap -> Combinator -> FunDef
 combToFun m c@Combinator {..} =
   FunDef
     { name = ident,
-      constr = combToConstr' m c,
+      constr = combToConstr m c,
       res = typeConv m resType,
       ..
     }
 
 convADT :: TyMap -> A.ADT -> ADT
 convADT m A.ADT {..} =
-  let (constr, mappings) = unzip $ fmap (uncurry (combToConstr m)) $ zip [1 ..] constructors
-      mapping = fold mappings
+  let constr = fmap (combToConstr m) constructors
    in ADT
         { ..
         }
+
+countElem :: Eq a => a -> [a] -> Int
+countElem a [] = error "Not in list"
+countElem a (x : xs) =
+  if x == a
+    then 0
+    else 1 + countElem a xs
+
+sanitize' :: Text -> (Text, FieldMapping)
+sanitize' "type" = ("type_", M.fromList [("type_", "type")])
+sanitize' "data" = ("data_", M.fromList [("data_", "data")])
+sanitize' "pattern" = ("pattern_", M.fromList [("pattern_", "pattern")])
+sanitize' t = (t, mempty)
+
+sanitizeArg :: Int -> Text -> (Text, FieldMapping)
+sanitizeArg 0 t = sanitize' t
+sanitizeArg i t =
+  let n = t <> "_" <> pack (show i)
+   in (n, M.fromList [(unpack n, unpack t)])
+
+type State = (Map Text [Type], FieldMapping)
+
+sanitizeField :: State -> Field -> (State, Field)
+sanitizeField (tyMap, fieldMap) f@Field {..} =
+  case M.lookup name tyMap of
+    Nothing ->
+      let (name', dfm) = sanitizeArg 0 name
+       in ((M.insert name [ty] tyMap, fieldMap <> dfm), Field {name = name', ..})
+    Just l ->
+      if ty `elem` l
+        then
+          let c = countElem ty l
+              (name', dfm) = sanitizeArg c name
+           in ((tyMap, fieldMap <> dfm), Field name' ann ty)
+        else
+          let c = length l + 1
+              (name', dfm) = sanitizeArg c name
+              tyMap' = M.insert name (l <> [ty]) tyMap
+           in ((tyMap', fieldMap <> dfm), Field name' ann ty)
+
+sanitizeField' :: Field -> (State, [Field]) -> (State, [Field])
+sanitizeField' f (s, fs) =
+  let (s', f') = sanitizeField s f
+   in (s', f' : fs)
+
+sanitizeConstr :: State -> Constr -> (State, Constr)
+sanitizeConstr s Constr {..} =
+  let (s', fields') = foldr sanitizeField' (s, []) fields
+   in ( s',
+        Constr
+          { fields = fields',
+            ..
+          }
+      )
+
+sanitizeConstr' :: Constr -> (State, [Constr]) -> (State, [Constr])
+sanitizeConstr' c (s, cs) =
+  let (s', c') = sanitizeConstr s c
+   in (s', c' : cs)
+
+sanitizeADT :: ADT -> (ADT, FieldMapping)
+sanitizeADT adt@ADT {..} =
+  let ((_, fm), constr') = foldr sanitizeConstr' mempty constr
+   in ( ADT
+          { constr = constr',
+            ..
+          },
+        fm
+      )
 
 convFun :: TyMap -> Function -> FunDef
 convFun m (Function c) = combToFun m c
@@ -139,7 +174,6 @@ paramADT :: FunDef -> ADT
 paramADT FunDef {..} =
   ADT
     { ann = Just ("Parameter of Function " <> name),
-      mapping = defMapping,
       constr = [constr],
       name = upper name
     }

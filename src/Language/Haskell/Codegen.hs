@@ -30,10 +30,12 @@ data ADT
   = ADT
       { name :: Text,
         ann :: Ann,
-        constr :: [Constr],
-        mapping :: Map String String
+        constr :: [Constr]
       }
   deriving (Show, Eq, Generic)
+
+constructors :: ADT -> Int
+constructors ADT {..} = length constr
 
 prettyConstrs :: [Doc ann] -> Doc ann
 prettyConstrs [] = mempty
