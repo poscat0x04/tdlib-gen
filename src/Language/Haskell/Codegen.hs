@@ -6,7 +6,6 @@ module Language.Haskell.Codegen where
 import Control.Lens
 import Data.Generics.Labels ()
 import Data.List
-import Data.Map.Strict (Map)
 import Data.String
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -149,7 +148,6 @@ flattenSig :: FunDef -> Doc ann
 flattenSig FunDef {..} =
   let n = unsafeTextWithoutNewlines name
       doc = prettyDoc ann
-      c = unsafeTextWithoutNewlines (constr ^. #name)
       sig = pretty $ formArr (fmap getAnn (fields constr)) (res, Nothing)
    in vsep
         [ doc <> n <+> "::",

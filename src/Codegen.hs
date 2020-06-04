@@ -2,7 +2,6 @@ module Codegen where
 
 import Data.Aeson
 import Data.Char
-import Data.Foldable
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 import Data.Maybe (fromMaybe)
@@ -58,7 +57,7 @@ defTyMap =
 typeConv :: TyMap -> A.Type -> Type
 typeConv m (A.Type t) = Type $ fromMaybe (upper t) $ M.lookup t m
 typeConv m (A.TypeApp t ts) = app (typeConv m t) (fmap (typeConv m) ts)
-typeConv m A.NatType = Type "Int"
+typeConv _ A.NatType = Type "Int"
 
 app :: Type -> [Type] -> Type
 app t = foldl (\acc ty -> App acc ty) t
@@ -99,7 +98,7 @@ convADT m A.ADT {..} =
         }
 
 countElem :: Eq a => a -> [a] -> Int
-countElem a [] = error "Not in list"
+countElem _ [] = error "Not in list"
 countElem a (x : xs) =
   if x == a
     then 0
@@ -117,10 +116,10 @@ sanitizeArg i t =
   let n = t <> "_" <> pack (show i)
    in (n, M.fromList [(unpack n, unpack t)])
 
-type State = (Map Text [Type], FieldMapping)
+type SanitizerState = (Map Text [Type], FieldMapping)
 
-sanitizeField :: State -> Field -> (State, Field)
-sanitizeField (tyMap, fieldMap) f@Field {..} =
+sanitizeField :: SanitizerState -> Field -> (SanitizerState, Field)
+sanitizeField (tyMap, fieldMap) Field {..} =
   case M.lookup name tyMap of
     Nothing ->
       let (name', dfm) = sanitizeArg 0 name
@@ -137,12 +136,12 @@ sanitizeField (tyMap, fieldMap) f@Field {..} =
               tyMap' = M.insert name (l <> [ty]) tyMap
            in ((tyMap', fieldMap <> dfm), Field name' ann ty)
 
-sanitizeField' :: Field -> (State, [Field]) -> (State, [Field])
+sanitizeField' :: Field -> (SanitizerState, [Field]) -> (SanitizerState, [Field])
 sanitizeField' f (s, fs) =
   let (s', f') = sanitizeField s f
    in (s', f' : fs)
 
-sanitizeConstr :: State -> Constr -> (State, Constr)
+sanitizeConstr :: SanitizerState -> Constr -> (SanitizerState, Constr)
 sanitizeConstr s Constr {..} =
   let (s', fields') = foldr sanitizeField' (s, []) fields
    in ( s',
@@ -152,13 +151,13 @@ sanitizeConstr s Constr {..} =
           }
       )
 
-sanitizeConstr' :: Constr -> (State, [Constr]) -> (State, [Constr])
+sanitizeConstr' :: Constr -> (SanitizerState, [Constr]) -> (SanitizerState, [Constr])
 sanitizeConstr' c (s, cs) =
   let (s', c') = sanitizeConstr s c
    in (s', c' : cs)
 
 sanitizeADT :: ADT -> (ADT, FieldMapping)
-sanitizeADT adt@ADT {..} =
+sanitizeADT ADT {..} =
   let ((_, fm), constr') = foldr sanitizeConstr' mempty constr
    in ( ADT
           { constr = constr',

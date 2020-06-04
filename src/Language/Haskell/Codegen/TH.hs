@@ -25,8 +25,8 @@ concatDec = fmap (concat) . sequence
 
 preProcess :: FilePath -> IO ([ADT], [ADT])
 preProcess fp = do
-  f <- T.readFile fp
-  let mprog = runParser program "td_api.tl" f
+  file <- T.readFile fp
+  let mprog = runParser program "td_api.tl" file
   case mprog of
     Left _ -> error "parse failed!"
     Right prog -> do
