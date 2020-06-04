@@ -75,6 +75,7 @@ tests:
       - -with-rtsopts=-N
     dependencies:
       - tdlib-gen
+      - pretty-simple
 
 executables:
   tdlib-gen:
