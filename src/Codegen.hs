@@ -10,12 +10,7 @@ import qualified Data.Text as T
 import Language.Haskell.Codegen
 import Language.TL.AST hiding (ADT (..), Ann, App, Type (..))
 import qualified Language.TL.AST as A
-
-upper :: Text -> Text
-upper t = T.cons (toUpper $ T.head t) (T.tail t)
-
-lower :: String -> String
-lower t = (toLower $ head t) : (tail t)
+import Text.Casing
 
 type TyMap = Map Text Text
 
@@ -41,7 +36,7 @@ mkOption fieldM =
     }
 
 mkModifier :: FieldMapping -> Modifier
-mkModifier m s = fromMaybe s (M.lookup s m)
+mkModifier m s = fromMaybe (camelToSnake s) (M.lookup s m)
 
 defTyMap :: TyMap
 defTyMap =
@@ -108,12 +103,12 @@ sanitize' :: Text -> (Text, FieldMapping)
 sanitize' "type" = ("type_", M.fromList [("type_", "type")])
 sanitize' "data" = ("data_", M.fromList [("data_", "data")])
 sanitize' "pattern" = ("pattern_", M.fromList [("pattern_", "pattern")])
-sanitize' t = (t, mempty)
+sanitize' t = (snakeToCamel t, mempty)
 
 sanitizeArg :: Int -> Text -> (Text, FieldMapping)
 sanitizeArg 0 t = sanitize' t
 sanitizeArg i t =
-  let n = t <> "_" <> pack (show i)
+  let n = (snakeToCamel t) <> "_" <> pack (show i)
    in (n, M.fromList [(unpack n, unpack t)])
 
 type SanitizerState = (Map Text [Type], FieldMapping)
