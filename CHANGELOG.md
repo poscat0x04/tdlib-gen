@@ -8,3 +8,8 @@ Initial release
 
 - flatten function defitions
 - less invasive sanitization
+
+## 0.3.0
+
+- change the casing of generated datatype to camelCase
+
