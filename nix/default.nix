@@ -2,16 +2,13 @@
 let
   sources = import ./sources.nix;
   pkgs = import sources.nixpkgs { };
-  inherit (sources) language-tl;
 
   inherit (import sources.gitignore { inherit (pkgs) lib; }) gitignoreSource;
 
   hPkgs = pkgs.haskell.packages.${compiler}.override {
     overrides = self: super: {
       "tdlib-gen" =
-        self.callCabal2nix "tdlib-gen" (gitignoreSource ../.) {
-          language-tl = import "${language-tl}" { inherit compiler; };
-        };
+        self.callCabal2nix "tdlib-gen" (gitignoreSource ../.) { };
     };
   };
 

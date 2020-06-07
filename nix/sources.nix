@@ -5,6 +5,5 @@ let
   sources = {
     nixpkgs = loadJSON ./nixpkgs.json;
     gitignore = loadJSON ./gitignore.json;
-    language-tl = loadJSON ./language-tl.json;
   };
 in builtins.mapAttrs (_: fetchFromGitHub) sources
