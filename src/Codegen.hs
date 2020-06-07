@@ -5,7 +5,7 @@ import Data.Char
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 import Data.Maybe (fromMaybe)
-import Data.Text (Text, pack, unpack)
+import Data.Text (Text, isInfixOf, pack, unpack)
 import qualified Data.Text as T
 import Language.Haskell.Codegen
 import Language.TL.AST hiding (ADT (..), Ann, App, Type (..))
@@ -59,11 +59,17 @@ app t = foldr (\ty acc -> App acc ty) t
 
 convArg :: TyMap -> Arg -> Field
 convArg m Arg {..} =
-  Field
-    { name = argName,
-      ty = typeConv m argType,
-      ..
-    }
+  let ty = typeConv m argType
+   in Field
+        { name = argName,
+          ty = case ann of
+            Nothing -> ty
+            Just doc ->
+              if "may be null" `isInfixOf` doc
+                then warpM ty
+                else ty,
+          ..
+        }
 
 combToConstr :: TyMap -> Combinator -> Constr
 combToConstr m Combinator {..} =

@@ -65,6 +65,10 @@ data Field
       }
   deriving (Show, Eq, Generic)
 
+warpM :: Type -> Type
+warpM (App (Type "[]") t') = App (Type "[]") (warpM t')
+warpM t = App (Type "Maybe") t
+
 instance Pretty Field where
   pretty Field {..} =
     prettyDoc ann
