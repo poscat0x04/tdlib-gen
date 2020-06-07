@@ -1,0 +1,6 @@
+cradle:
+  cabal:
+    - path: "./src"
+      component: "lib:tdlib-gen"
+    - path : "./test"
+      component: "test:tdlib-gen-test"

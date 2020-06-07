@@ -22,6 +22,8 @@ let
       cabal-install
       ormolu
       hlint
+    ] ++ [
+      hPkgs.ghcide
     ];
   };
 
