@@ -78,8 +78,8 @@ declBlockToFun = fmap (\(_, c) -> Function c)
 
 convProgram :: Program -> ([ADT], [Function])
 convProgram prog =
-  foldl
-    ( \(c, f) blk -> case blk of
+  foldr
+    ( \blk (c, f) -> case blk of
         FunDeclBlk decls -> (c, (declBlockToFun $ filterAnnDecl decls) <> f)
         TypeDeclBlk decls -> ((declBlockToADT $ filterAnnDecl decls) <> c, f)
     )

@@ -55,7 +55,7 @@ typeConv m (A.TypeApp t ts) = app (typeConv m t) (fmap (typeConv m) ts)
 typeConv _ A.NatType = Type "Int"
 
 app :: Type -> [Type] -> Type
-app t = foldl (\acc ty -> App acc ty) t
+app t = foldr (\ty acc -> App acc ty) t
 
 convArg :: TyMap -> Arg -> Field
 convArg m Arg {..} =
@@ -74,7 +74,7 @@ combToConstr m Combinator {..} =
     }
 
 formArr :: [Field] -> Type -> Ann -> TypeSig
-formArr fields resT resAnn = foldl (\res Field {..} -> Conn {..}) (Result {ty = resT, ann = resAnn}) fields
+formArr fields resT resAnn = foldr (\Field {..} res -> Conn {..}) (Result {ty = resT, ann = resAnn}) fields
 
 combToFun :: TyMap -> Combinator -> FunDef
 combToFun m c@Combinator {..} =

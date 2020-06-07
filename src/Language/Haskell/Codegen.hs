@@ -22,7 +22,7 @@ prettyDoc :: Ann -> Doc ann
 prettyDoc (Just d) =
   let ls = T.lines d
       ds = fmap unsafeTextWithoutNewlines ls
-   in "-- |" <+> foldl1 (<>) (intersperse (line <> "--" <> line <> "--") ds) <> line
+   in "-- |" <+> foldl1' (<>) (intersperse (line <> "--" <> line <> "--") ds) <> line
 prettyDoc Nothing = mempty
 
 data ADT
@@ -40,7 +40,7 @@ prettyConstrs :: [Doc ann] -> Doc ann
 prettyConstrs [] = mempty
 prettyConstrs (x : xs) =
   vsep
-    [ foldl1 (<>) (intersperse (line <> "| ") (("=" <+> x) : xs)),
+    [ foldl1' (<>) (intersperse (line <> "| ") (("=" <+> x) : xs)),
       "deriving (Show, Eq, Generic)"
     ]
 
@@ -85,7 +85,7 @@ instance Pretty Constr where
   pretty Constr {..} =
     let doc = prettyDoc ann
         n = unsafeTextWithoutNewlines name
-        fs = foldl (<>) mempty (intersperse ("," <> line) (fmap pretty fields))
+        fs = foldl' (<>) mempty (intersperse ("," <> line) (fmap pretty fields))
      in doc
           <> vsep
             [ n,
